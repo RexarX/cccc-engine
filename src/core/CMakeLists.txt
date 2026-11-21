@@ -328,6 +328,7 @@ if(CCCR_BUILD_SHARED AND CMAKE_SYSTEM_NAME STREQUAL "Linux")
       "LINKER:--exclude-libs=libraptor2.a"
       "LINKER:--exclude-libs=librasqal.a"
       "LINKER:--exclude-libs=librdf.a"
+      "LINKER:--no-undefined"
   )
   cccr_saxon_che_apply_build_rpath(cccr_core)
 endif()

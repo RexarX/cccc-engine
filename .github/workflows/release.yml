@@ -69,7 +69,8 @@ jobs:
             gcc-14 g++-14 \
             ninja-build pkg-config patchelf make \
             python3 python3-pip python3-venv \
-            libxml2-dev libpcre3-dev libcurl4-openssl-dev libicu-dev zlib1g-dev
+            libxml2-dev libpcre3-dev libcurl4-openssl-dev libicu-dev zlib1g-dev \
+            libgcrypt20-dev uuid-dev
           python3 -m pip install --user 'cmake>=3.25'
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
@@ -178,7 +179,8 @@ jobs:
             gcc-14 g++-14 \
             ninja-build pkg-config patchelf make \
             python3 python3-pip \
-            libxml2-dev libpcre3-dev libcurl4-openssl-dev libicu-dev zlib1g-dev
+            libxml2-dev libpcre3-dev libcurl4-openssl-dev libicu-dev zlib1g-dev \
+            libgcrypt20-dev uuid-dev
           python3 -m pip install --user 'cmake>=3.25'
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 

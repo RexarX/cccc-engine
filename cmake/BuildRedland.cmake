@@ -42,7 +42,7 @@ function(cccr_redland_find_shared out_var)
 
   if(NOT ${_cache_var})
     set(_saved_suffixes "${CMAKE_FIND_LIBRARY_SUFFIXES}")
-    set(CMAKE_FIND_LIBRARY_SUFFIXES ".so" ".so.2" ".so.1" ".so.0" ".a")
+    set(CMAKE_FIND_LIBRARY_SUFFIXES ".so" ".so.20" ".so.3" ".so.2" ".so.1" ".so.0" ".a")
     find_library(${_cache_var} NAMES ${_names})
     set(CMAKE_FIND_LIBRARY_SUFFIXES "${_saved_suffixes}")
 
@@ -55,6 +55,8 @@ function(cccr_redland_find_shared out_var)
             /usr/lib)
           foreach(_cand IN ITEMS
               "${_dir}/lib${_name}.so"
+              "${_dir}/lib${_name}.so.20"
+              "${_dir}/lib${_name}.so.3"
               "${_dir}/lib${_name}.so.2"
               "${_dir}/lib${_name}.so.1"
               "${_dir}/lib${_name}.so.0")
@@ -355,10 +357,15 @@ else()
   cccr_redland_find_shared(_gmp gmp)
   cccr_redland_find_shared(_mhash mhash)
   cccr_redland_find_shared(_ltdl ltdl)
+  # rasqal uses PCRE when libpcre is present. raptor/librdf optionally call
+  # libgcrypt and libuuid. Their symbols stay undefined in the static archives.
+  cccr_redland_find_shared(_pcre pcre)
+  cccr_redland_find_shared(_gcrypt gcrypt)
+  cccr_redland_find_shared(_uuid uuid)
   set(_cccr_transitive "")
   foreach(_lib IN ITEMS
       "${_curl}" "${_xml2}" "${_xslt}" "${_yajl}" "${_icuuc}" "${_icudata}"
-      "${_gmp}" "${_mhash}" "${_ltdl}" m)
+      "${_gmp}" "${_mhash}" "${_ltdl}" "${_pcre}" "${_gcrypt}" "${_uuid}" m)
     if(_lib)
       list(APPEND _cccr_transitive "${_lib}")
     endif()
