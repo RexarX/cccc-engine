@@ -180,7 +180,7 @@ cmake --install build/linux-gcc-release --prefix /path/to/prefix
 
 SaxonC-HE runtime libraries are redistributed with the install so installed tools can resolve them via RPATH. See [`cmake/Install.cmake`](cmake/Install.cmake).
 
-Exported CMake targets (NAMESPACE `cccr::`): `cccr::cccr`, `cccr::bindings::c`. `cccr::cccr` is a shared library when `CCCR_BUILD_SHARED=ON` and a static archive otherwise. A static install still expects the consumer to link Redland and SaxonC-HE. A shared install keeps those inside `libcccr_core.so`.
+The installed CMake package exports `cccr::cccr`. It is a shared library when `CCCR_BUILD_SHARED=ON` and a static archive otherwise. A static install still expects the consumer to link Redland and SaxonC-HE. A shared install keeps those inside `libcccr_core.so`. The C shared library is installed beside it, but it is not a CMake target; link it with `-lcccr_bindings_c`.
 
 ### Python wheel (scikit-build)
 
@@ -247,7 +247,7 @@ cc -std=c11 app.c \
 ./app
 ```
 
-CMake consumers in-tree or after install can link `cccr::bindings::c`.
+In-tree CMake builds can link `cccr::bindings::c`. The installed package does not export that target.
 
 ### Python extension module
 
