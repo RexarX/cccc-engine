@@ -1,0 +1,4 @@
+# SaxonC-HE retains Graal isolate allocations after SaxonProcessor::release().
+# Native binaries get the same rule from __lsan_default_suppressions. Python
+# loads this file because the interpreter is not linked with the sanitizer.
+leak:libsaxonc-core-he.so
