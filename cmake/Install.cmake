@@ -37,11 +37,16 @@ function(cccr_configure_install)
   set(_runtime_targets)
   cccr_install_set_runtime_rpath(cccr_core)
 
+  # The C library is a separate release archive. Install the .so here, but do
+  # not export it: the C++ package deletes libcccr_bindings_c.so, and
+  # find_package(CCCR) would then reject the missing imported location.
   if(TARGET cccr_bindings_c)
-    # Nested export name → imported target cccr::bindings::c (NAMESPACE cccr::).
-    set_target_properties(cccr_bindings_c PROPERTIES EXPORT_NAME bindings::c)
-    list(APPEND _export_targets cccr_bindings_c)
     cccr_install_set_runtime_rpath(cccr_bindings_c)
+    install(TARGETS cccr_bindings_c
+        ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+        LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+        RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
+    )
   endif()
 
   if(TARGET cccr_cli)
