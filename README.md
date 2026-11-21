@@ -362,5 +362,3 @@ cmake -S your_app -B build \
 # Python
 pip install cccr_py-0.1.0-cp311-cp311-manylinux_2_35_x86_64.whl
 ```
-
-The workflow that builds these files is [`.github/workflows/release.yml`](.github/workflows/release.yml). It runs on a `v*` tag. `workflow_dispatch` builds the same artifacts without publishing a release.
