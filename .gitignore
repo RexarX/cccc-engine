@@ -30,10 +30,10 @@
 *.out
 *.app
 
-# Build files
+# Build files (anchored so third-party autotools aux dirs stay tracked)
 out/
-build/
-bin/
+/build/
+/bin/
 
 # Editors
 .sln

@@ -146,6 +146,25 @@
       "inherits": ["linux-base", "gcc", "release-config"]
     },
     {
+      "name": "linux-gcc-dist",
+      "displayName": "Linux GCC distribution",
+      "description": "Release build for GitHub release artifacts (GCC 14, vendored Redland, shared core)",
+      "inherits": ["linux-base", "release-config"],
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "gcc-14",
+        "CMAKE_CXX_COMPILER": "g++-14",
+        "CCCR_ENABLE_INSTALL": "ON",
+        "CCCR_BUILD_SHARED": "ON",
+        "CCCR_REDLAND_USE_SYSTEM": "OFF",
+        "CCCR_BUILD_TESTS": "OFF",
+        "CCCR_BUILD_EXAMPLES": "OFF",
+        "CCCR_BUILD_BINDINGS_PYTHON": "OFF",
+        "CCCR_BUILD_CLI": "ON",
+        "CCCR_BUILD_BINDINGS_C": "ON",
+        "CCCR_ENABLE_SANITIZERS": "OFF"
+      }
+    },
+    {
       "name": "linux-clang-debug",
       "displayName": "Linux Clang Debug",
       "description": "Linux debug build with Clang",
@@ -254,6 +273,12 @@
       "configurePreset": "linux-gcc-release",
       "displayName": "Build Linux GCC Release",
       "description": "Build Linux release with GCC"
+    },
+    {
+      "name": "linux-gcc-dist",
+      "configurePreset": "linux-gcc-dist",
+      "displayName": "Build Linux GCC distribution",
+      "description": "Build the GitHub release configuration"
     },
     {
       "name": "linux-clang-debug",

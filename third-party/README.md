@@ -31,6 +31,12 @@ Resolved by [`cmake/BuildRedland.cmake`](../cmake/BuildRedland.cmake):
    `CCCR_REDLAND_USE_SYSTEM=ON` (default)
 2. Else ExternalProject from these trees → install prefix under the CMake build dir
 
+Each tree's `build/` directory holds the Autotools helper scripts from the
+upstream tarball (`config.guess`, `ltmain.sh`, and the rest). The repository
+gitignore anchors `build/` at the repo root so these directories stay tracked.
+Release builds compile them with `-fPIC` because `libcccr_core.so` and
+`libcccr_bindings_c.so` link the static archives.
+
 Imported targets: `Redland::raptor2`, `Redland::rasqal`, `Redland::redland`,
 `cccr::redland` (umbrella). `CCCR_REDLAND_VENDORED` is set when using (2).
 

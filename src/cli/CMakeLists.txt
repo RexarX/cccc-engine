@@ -192,7 +192,7 @@ target_include_directories(cccr_cli_lib
 
 target_link_libraries(cccr_cli_lib
     PUBLIC
-        cccr::core
+        cccr::cccr
     PRIVATE
         argparse::argparse
 )

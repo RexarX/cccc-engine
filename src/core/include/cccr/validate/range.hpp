@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cccr/context.hpp>
+#include <cccr/platform.hpp>
 #include <cccr/rdf/graph.hpp>
 #include <cccr/validate/error.hpp>
 
@@ -19,8 +20,9 @@ namespace cccr::validate {
 /// @param ontology Schema / seed triples that declare ranges and types
 /// @param ctx Shared allocator context for temporary lookup maps
 /// @return Empty success or `ValidateError`
-[[nodiscard]] auto CheckRdfsRange(const rdf::Graph& data,
-                                  const rdf::Graph& ontology, Context ctx = {})
+[[nodiscard]] CCCR_API auto CheckRdfsRange(const rdf::Graph& data,
+                                           const rdf::Graph& ontology,
+                                           Context ctx = {})
     -> ValidateResult<void>;
 
 }  // namespace cccr::validate

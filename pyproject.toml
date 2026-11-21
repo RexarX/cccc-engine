@@ -6,6 +6,8 @@ build-backend = "scikit_build_core.build"
 
 [project]
 name = "cccr-py"
+# Keep in sync with project(VERSION) in CMakeLists.txt. The release workflow
+# rejects a tag when these differ.
 version = "0.1.0"
 description = "CCCR engine Python bindings"
 readme = "README.md"

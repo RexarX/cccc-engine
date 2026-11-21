@@ -2,7 +2,9 @@
 
 include(CMakeFindDependencyMacro)
 
-# cccr_core is a static library; SaxonC-HE is required at final link.
+# Static cccr::cccr needs SaxonC-HE at the consumer's final link. The shared
+# library already NEEDs it; find_dependency still resolves the imported target
+# recorded on the shared export.
 # glaze is header-only and linked PRIVATE — not required by consumers of the
 # installed package unless they compile against glaze-using headers.
 find_dependency(SaxonCHE @CCCR_CONFIG_SAXON_CHE_VERSION@ EXACT)
@@ -49,6 +51,15 @@ if(_CCCR_REDLAND_VENDORED AND _CCCR_REDLAND_STATIC)
       INTERFACE_LINK_LIBRARIES Redland::redland
     )
   endif()
+
+  # System libraries the static archives were built against (libxml2, ICU, …).
+  # Flags are -l:filename or "m", resolved by the consumer's linker. A shared
+  # cccr::cccr already NEEDs these libraries and does not use this interface.
+  set(_CCCR_REDLAND_TRANSITIVE "@CCCR_CONFIG_REDLAND_TRANSITIVE@")
+  if(_CCCR_REDLAND_TRANSITIVE AND TARGET cccr::redland)
+    string(REPLACE "|" ";" _CCCR_REDLAND_TRANSITIVE "${_CCCR_REDLAND_TRANSITIVE}")
+    target_link_libraries(cccr::redland INTERFACE ${_CCCR_REDLAND_TRANSITIVE})
+  endif()
 else()
   find_dependency(PkgConfig)
   pkg_check_modules(CCCR_REDLAND_PC REQUIRED IMPORTED_TARGET redland)
@@ -80,11 +91,12 @@ endif()
 
 include("${CMAKE_CURRENT_LIST_DIR}/CCCRTargets.cmake")
 
-# cccr_core is static: consumers must link Redland + Saxon at final link time.
-# These were BUILD_INTERFACE-only during the CCCR build so install(EXPORT) stays
-# free of non-exported imported targets.
-if(TARGET cccr::core)
-  target_link_libraries(cccr::core INTERFACE
+# Static cccr::cccr: consumers link Redland + Saxon at final link time.
+# These were BUILD_INTERFACE-only during the CCCR build so install(EXPORT)
+# stays free of non-exported imported targets. The shared library already
+# contains them.
+if(NOT @CCCR_CONFIG_BUILD_SHARED@ AND TARGET cccr::cccr)
+  target_link_libraries(cccr::cccr INTERFACE
       cccr::redland
       SaxonCHE::saxonc-he
   )

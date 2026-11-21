@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cccr/context.hpp>
+#include <cccr/platform.hpp>
 #include <cccr/rdf/term.hpp>
 
 #include <cstddef>
@@ -20,7 +21,7 @@ namespace cccr::rdf {
 /// @details Copies share the same underlying model and triple cache
 ///          (`std::shared_ptr`). Create independent graphs with
 ///          @ref FromContext / default construction, then @ref Add.
-class Graph {
+class CCCR_API Graph {
 public:
   /// @brief Constructs an empty graph using `std::pmr::get_default_resource()`.
   Graph() : Graph(FromContext(Context{})) {}

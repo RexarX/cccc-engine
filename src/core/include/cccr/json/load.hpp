@@ -3,6 +3,7 @@
 #include <cccr/ast/types.hpp>
 #include <cccr/context.hpp>
 #include <cccr/json/error.hpp>
+#include <cccr/platform.hpp>
 
 #include <filesystem>
 #include <string_view>
@@ -22,8 +23,8 @@ struct LoadSchemaParams {
 /// @param json UTF-8 JSON text
 /// @param params Optional include base and allocator
 /// @return Parsed schema or a JsonError
-[[nodiscard]] auto LoadSchema(std::string_view json,
-                              const LoadSchemaParams& params = {})
+[[nodiscard]] CCCR_API auto LoadSchema(std::string_view json,
+                                       const LoadSchemaParams& params = {})
     -> JsonResult<ast::Schema>;
 
 }  // namespace cccr::json

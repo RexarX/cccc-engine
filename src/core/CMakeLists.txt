@@ -207,8 +207,12 @@ target_link_options(cccr_core_compiler_optimizations INTERFACE
     >
 )
 
-add_library(cccr_core STATIC ${CCCR_CORE_ALL_FILES})
-add_library(cccr::core ALIAS cccr_core)
+if(CCCR_BUILD_SHARED)
+  add_library(cccr_core SHARED ${CCCR_CORE_ALL_FILES})
+else()
+  add_library(cccr_core STATIC ${CCCR_CORE_ALL_FILES})
+endif()
+add_library(cccr::cccr ALIAS cccr_core)
 
 # PCH
 target_precompile_headers(cccr_core PRIVATE
@@ -242,6 +246,24 @@ target_compile_definitions(cccr_core PUBLIC
     $<$<CONFIG:RelWithDebInfo>:CCCR_RELEASE_WITH_DEBUG_INFO_MODE>
     $<$<CONFIG:Release>:CCCR_RELEASE_MODE NDEBUG>
 )
+
+if(CCCR_BUILD_SHARED)
+  # Consumers see CCCR_BUILD_SHARED. Only this target sees CCCR_CORE_BUILDING,
+  # which selects dllexport while the shared library is compiled.
+  target_compile_definitions(cccr_core
+      PUBLIC CCCR_BUILD_SHARED
+      PRIVATE CCCR_CORE_BUILDING
+  )
+  set_target_properties(cccr_core PROPERTIES
+      SOVERSION 0
+      VERSION "${PROJECT_VERSION}"
+      CXX_VISIBILITY_PRESET hidden
+      VISIBILITY_INLINES_HIDDEN ON
+      INSTALL_RPATH "$ORIGIN"
+      INSTALL_RPATH_USE_LINK_PATH FALSE
+      BUILD_WITH_INSTALL_RPATH FALSE
+  )
+endif()
 
 if(WIN32)
   target_compile_definitions(cccr_core PUBLIC
@@ -282,14 +304,33 @@ target_include_directories(cccr_core
 )
 
 # Third-party (BUILD_INTERFACE only — install(EXPORT) cannot reference
-# non-exported imported targets; CCCRConfig.cmake re-attaches link deps).
-target_link_libraries(cccr_core
-    PUBLIC
-        $<BUILD_INTERFACE:cccr::redland>
-    PRIVATE
-        $<BUILD_INTERFACE:glaze::glaze>
-        $<BUILD_INTERFACE:SaxonCHE::saxonc-he>
-)
+# non-exported imported targets). A static library's consumers link Redland
+# and Saxon again from CCCRConfig.cmake. A shared library keeps them private.
+if(CCCR_BUILD_SHARED)
+  target_link_libraries(cccr_core PRIVATE
+      $<BUILD_INTERFACE:cccr::redland>
+      $<BUILD_INTERFACE:glaze::glaze>
+      $<BUILD_INTERFACE:SaxonCHE::saxonc-he>
+  )
+else()
+  target_link_libraries(cccr_core
+      PUBLIC
+          $<BUILD_INTERFACE:cccr::redland>
+      PRIVATE
+          $<BUILD_INTERFACE:glaze::glaze>
+          $<BUILD_INTERFACE:SaxonCHE::saxonc-he>
+  )
+endif()
+
+if(CCCR_BUILD_SHARED AND CMAKE_SYSTEM_NAME STREQUAL "Linux")
+  # One option each: CMake turns commas in LINKER: into separate ld arguments.
+  target_link_options(cccr_core PRIVATE
+      "LINKER:--exclude-libs=libraptor2.a"
+      "LINKER:--exclude-libs=librasqal.a"
+      "LINKER:--exclude-libs=librdf.a"
+  )
+  cccr_saxon_che_apply_build_rpath(cccr_core)
+endif()
 
 if(CCCR_REDLAND_VENDORED)
   add_dependencies(cccr_core cccr_redland_ep)
@@ -359,7 +400,7 @@ if(CCCR_BUILD_TESTS)
   cccr_target_enable_sanitizers(cccr_core_tests)
 
   target_link_libraries(cccr_core_tests PRIVATE
-      cccr::core
+      cccr::cccr
       cccr::redland
       doctest::doctest
   )

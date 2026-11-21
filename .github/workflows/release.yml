@@ -1,0 +1,249 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  version:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check CMake, pyproject, and tag versions
+        run: |
+          set -euo pipefail
+          cmake_ver=$(python3 - <<'PY'
+          import re
+          from pathlib import Path
+          text = Path("CMakeLists.txt").read_text(encoding="utf-8")
+          match = re.search(
+              r"project\s*\(\s*cccr-engine\b.*?VERSION\s+([0-9]+\.[0-9]+\.[0-9]+)",
+              text,
+              re.DOTALL,
+          )
+          if match is None:
+              raise SystemExit("CMake version not found")
+          print(match.group(1))
+          PY
+          )
+          py_ver=$(python3 - <<'PY'
+          import re
+          from pathlib import Path
+          text = Path("pyproject.toml").read_text(encoding="utf-8")
+          match = re.search(r'(?m)^version\s*=\s*"([^"]+)"', text)
+          if match is None:
+              raise SystemExit("pyproject version not found")
+          print(match.group(1))
+          PY
+          )
+          echo "CMake ${cmake_ver}, pyproject ${py_ver}"
+          test "$cmake_ver" = "$py_ver"
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            test "${GITHUB_REF_NAME#v}" = "$cmake_ver"
+          fi
+
+  native:
+    needs: version
+    runs-on: ubuntu-22.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install toolchain
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y software-properties-common
+          sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
+          sudo apt-get update
+          sudo apt-get install -y \
+            gcc-14 g++-14 \
+            ninja-build pkg-config patchelf make \
+            python3 python3-pip python3-venv \
+            libxml2-dev libpcre3-dev libcurl4-openssl-dev libicu-dev zlib1g-dev
+          python3 -m pip install --user 'cmake>=3.25'
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Cache SaxonC-HE
+        uses: actions/cache@v4
+        with:
+          path: .cache/saxonc-he
+          key: saxonc-he-13.0.0-linux-x86_64
+
+      - name: Configure and build
+        run: |
+          set -euo pipefail
+          cmake --version
+          g++-14 --version
+          cmake --preset linux-gcc-dist
+          cmake --build --preset linux-gcc-dist
+
+      - name: Assemble tarballs
+        run: |
+          set -euo pipefail
+          python3 scripts/assemble_release.py \
+            --build-dir build/linux-gcc-dist \
+            --output-dir dist \
+            --cxx g++-14
+
+      - name: Smoke on the runner
+        run: |
+          set -euo pipefail
+          tar -xzf dist/cccr-cpp-*-linux-x86_64.tar.gz -C /tmp
+          tar -xzf dist/cccr-cli-*-linux-x86_64.tar.gz -C /tmp
+          cpp=$(echo /tmp/cccr-cpp-*-linux-x86_64)
+          cli=$(echo /tmp/cccr-cli-*-linux-x86_64)
+          cmake -S scripts/smoke/cpp -B /tmp/cccr-smoke \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_CXX_COMPILER=g++-14 \
+            -DCMAKE_PREFIX_PATH="$cpp" \
+            -DCCCR_SMOKE_LIBDIR="$cpp/lib"
+          cmake --build /tmp/cccr-smoke
+          env -u LD_LIBRARY_PATH /tmp/cccr-smoke/cccr_dist_smoke
+          env -u LD_LIBRARY_PATH "$cli/bin/cccr_cli" --help
+          env -u LD_LIBRARY_PATH "$cli/bin/cccr_cli" run \
+            -s examples/data/base/schema.json \
+            -i examples/data/base/input.xml \
+            --seed examples/data/base/seed.nt \
+            -o /tmp/runner-out.rdf
+          test -s /tmp/runner-out.rdf
+
+      - name: Smoke in Ubuntu 22.04
+        run: |
+          set -euo pipefail
+          docker run --rm \
+            -v "$GITHUB_WORKSPACE:/src:ro" \
+            -w /tmp \
+            ubuntu:22.04 \
+            bash -eux -c '
+              apt-get update
+              apt-get install -y gcc ca-certificates
+              tar -xzf /src/dist/cccr-cli-*-linux-x86_64.tar.gz
+              tar -xzf /src/dist/cccr-c-*-linux-x86_64.tar.gz
+              cli=$(echo cccr-cli-*-linux-x86_64)
+              cbind=$(echo cccr-c-*-linux-x86_64)
+              env -u LD_LIBRARY_PATH "$cli/bin/cccr_cli" --help
+              env -u LD_LIBRARY_PATH "$cli/bin/cccr_cli" run \
+                -s /src/examples/data/base/schema.json \
+                -i /src/examples/data/base/input.xml \
+                --seed /src/examples/data/base/seed.nt \
+                -o /tmp/out.rdf
+              test -s /tmp/out.rdf
+              mkdir -p "$cbind/bin"
+              cc -std=c11 /src/scripts/smoke/c/smoke.c \
+                -I "$cbind/include" \
+                -L "$cbind/lib" \
+                -Wl,-rpath,"\$ORIGIN/../lib" \
+                -Wl,--disable-new-dtags \
+                -lcccr_bindings_c \
+                -o "$cbind/bin/cccr_c_smoke"
+              env -u LD_LIBRARY_PATH "$cbind/bin/cccr_c_smoke"
+            '
+
+      - name: Upload native tarballs
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-tarballs
+          path: dist/*.tar.gz
+          if-no-files-found: error
+
+  wheels:
+    needs: version
+    runs-on: ubuntu-22.04
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.10", "3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install toolchain
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y software-properties-common
+          sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
+          sudo apt-get update
+          sudo apt-get install -y \
+            gcc-14 g++-14 \
+            ninja-build pkg-config patchelf make \
+            python3 python3-pip \
+            libxml2-dev libpcre3-dev libcurl4-openssl-dev libicu-dev zlib1g-dev
+          python3 -m pip install --user 'cmake>=3.25'
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Cache SaxonC-HE
+        uses: actions/cache@v4
+        with:
+          path: .cache/saxonc-he
+          key: saxonc-he-13.0.0-linux-x86_64
+
+      - name: Build and repair the wheel
+        run: |
+          set -euo pipefail
+          python -m pip install -U pip
+          export CMAKE_ARGS="-DCMAKE_C_COMPILER=gcc-14 -DCMAKE_CXX_COMPILER=g++-14 -DCCCR_REDLAND_USE_SYSTEM=OFF -DCCCR_CACHE_DIR=${GITHUB_WORKSPACE}/.cache"
+          python -m pip wheel . -w dist/raw --no-deps
+          python3 scripts/repair_wheel.py dist/raw/*.whl dist/repaired --cxx g++-14
+
+      - name: Smoke the wheel
+        run: |
+          set -euo pipefail
+          python -m pip install dist/repaired/*.whl
+          python -c 'import cccr_py; print(cccr_py.__version__)'
+          python src/bindings/python/tests/smoke.py examples/data/base
+
+      - name: Upload wheel
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheel-cp${{ matrix.python }}
+          path: dist/repaired/*.whl
+          if-no-files-found: error
+
+  publish:
+    needs: [native, wheels]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME#v}"
+          mapfile -t files < <(find dist -type f \( -name '*.tar.gz' -o -name '*.whl' \) | sort)
+          echo "Publishing ${#files[@]} files"
+          printf '  %s\n' "${files[@]}"
+          test "${#files[@]}" -ge 7
+          gh release create "$GITHUB_REF_NAME" "${files[@]}" \
+            --title "CCCR ${version}" \
+            --notes "$(cat <<EOF
+          Linux x86_64 builds for glibc 2.35+ (Ubuntu 22.04 and newer), compiled with GCC 14.
+
+          - \`cccr-cli-${version}-linux-x86_64.tar.gz\` — CLI, with SaxonC-HE and the GCC 14 runtime bundled
+          - \`cccr-c-${version}-linux-x86_64.tar.gz\` — C shared library, headers, and the same runtime
+          - \`cccr-cpp-${version}-linux-x86_64.tar.gz\` — shared \`libcccr_core.so\`, headers, and the CMake package. Link with GCC 14.
+          - \`cccr_py-${version}-cp310\` through \`cp313\` wheels — \`pip install\` the matching wheel
+
+          The C++ shared library is SOVERSION 0. See the README for link lines and the libstdc++ limits.
+          EOF
+          )"

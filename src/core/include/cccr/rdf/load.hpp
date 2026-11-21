@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cccr/context.hpp>
+#include <cccr/platform.hpp>
 #include <cccr/rdf/error.hpp>
 #include <cccr/rdf/graph.hpp>
 #include <cccr/rdf/syntax.hpp>
@@ -17,8 +18,8 @@ namespace cccr::rdf {
 /// @param syntax Concrete serialization syntax
 /// @param ctx Shared allocator context
 /// @return Graph or RdfError
-[[nodiscard]] auto LoadRdf(std::string_view text, RdfSyntax syntax,
-                           Context ctx = {}) -> RdfResult<Graph>;
+[[nodiscard]] CCCR_API auto LoadRdf(std::string_view text, RdfSyntax syntax,
+                                    Context ctx = {}) -> RdfResult<Graph>;
 
 /// @brief Loads N-Triples into a graph via Redland/raptor.
 /// @param ntriples N-Triples text

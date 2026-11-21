@@ -4,6 +4,7 @@
 #include <cccr/csv/error.hpp>
 #include <cccr/csv/table.hpp>
 #include <cccr/input/source.hpp>
+#include <cccr/platform.hpp>
 #include <cccr/xml/source.hpp>
 
 #include <string_view>
@@ -11,7 +12,7 @@
 namespace cccr::csv {
 
 /// @brief CSV input backend: parses CSV, projects to XML, evaluates via XQuery.
-class CsvSource final : public input::Source {
+class CCCR_API CsvSource final : public input::Source {
 public:
   /// @brief Constructs an unloaded source that allocates via @p ctx.
   /// @param ctx Shared allocator context

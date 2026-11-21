@@ -31,10 +31,11 @@ function(cccr_configure_install)
     message(FATAL_ERROR "cccr_configure_install: cccr_core target is missing")
   endif()
 
-  set_target_properties(cccr_core PROPERTIES EXPORT_NAME core)
+  set_target_properties(cccr_core PROPERTIES EXPORT_NAME cccr)
 
   set(_export_targets cccr_core)
   set(_runtime_targets)
+  cccr_install_set_runtime_rpath(cccr_core)
 
   if(TARGET cccr_bindings_c)
     # Nested export name → imported target cccr::bindings::c (NAMESPACE cccr::).
@@ -93,30 +94,15 @@ function(cccr_configure_install)
   #   <prefix>/lib/cmake/SaxonCHE/
   #   <prefix>/lib/cmake/SaxonCCoreHE/
   if(CCCR_SAXON_CHE_ROOT)
-    set(_saxon_libs_installed FALSE)
+    cccr_saxon_che_install_runtime("${CMAKE_INSTALL_LIBDIR}")
     foreach(_saxon_pkg IN ITEMS SaxonCHE SaxonCCoreHE)
       set(_saxon_root "${CCCR_SAXON_CHE_ROOT}/${_saxon_pkg}")
-      if(EXISTS "${_saxon_root}/lib")
-        # Shared libraries — DIRECTORY + PATTERN keeps SONAME symlink chains.
-        file(GLOB _saxon_sos "${_saxon_root}/lib/libsaxonc*.so*")
-        if(_saxon_sos)
-          install(DIRECTORY "${_saxon_root}/lib/"
-              DESTINATION "${CMAKE_INSTALL_LIBDIR}"
-              USE_SOURCE_PERMISSIONS
-              FILES_MATCHING
-                  PATTERN "libsaxonc*.so"
-                  PATTERN "libsaxonc*.so.*"
-          )
-          set(_saxon_libs_installed TRUE)
-        endif()
-
+      if(EXISTS "${_saxon_root}/lib/cmake")
         # Upstream CMake packages (paths use ${_IMPORT_PREFIX}/lib/...).
-        if(EXISTS "${_saxon_root}/lib/cmake")
-          install(DIRECTORY "${_saxon_root}/lib/cmake/"
-              DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake"
-              USE_SOURCE_PERMISSIONS
-          )
-        endif()
+        install(DIRECTORY "${_saxon_root}/lib/cmake/"
+            DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake"
+            USE_SOURCE_PERMISSIONS
+        )
       endif()
       if(EXISTS "${_saxon_root}/include")
         install(DIRECTORY "${_saxon_root}/include/"
@@ -124,45 +110,29 @@ function(cccr_configure_install)
         )
       endif()
     endforeach()
-
-    if(NOT _saxon_libs_installed)
-      message(WARNING
-        "cccr_configure_install: no libsaxonc*.so under ${CCCR_SAXON_CHE_ROOT}; "
-        "installed binaries will fail to load SaxonC-HE at runtime.")
-    else()
-      message(STATUS
-        "Install: SaxonC-HE shared libs → \${CMAKE_INSTALL_PREFIX}/"
-        "${CMAKE_INSTALL_LIBDIR}")
-    endif()
   else()
     message(WARNING "cccr_configure_install: CCCR_SAXON_CHE_ROOT is empty; "
                     "SaxonC-HE runtime will not be installed. Consumers must "
                     "provide SaxonCHE themselves.")
   endif()
 
-  # Vendored static Redland archives (needed by consumers of static cccr_core).
-  if(CCCR_REDLAND_VENDORED AND CCCR_REDLAND_LINKED_STATIC AND CCCR_REDLAND_PREFIX)
-    foreach(_archive IN ITEMS libraptor2.a librasqal.a librdf.a)
-      if(EXISTS "${CCCR_REDLAND_PREFIX}/lib/${_archive}")
-        install(FILES "${CCCR_REDLAND_PREFIX}/lib/${_archive}"
-            DESTINATION "${CMAKE_INSTALL_LIBDIR}"
-        )
-      endif()
-    endforeach()
-    foreach(_inc IN ITEMS
-        "${CCCR_REDLAND_PREFIX}/include/redland.h"
-        "${CCCR_REDLAND_PREFIX}/include/librdf.h")
-      if(EXISTS "${_inc}")
-        install(FILES "${_inc}" DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
-      endif()
-    endforeach()
-    foreach(_incdir IN ITEMS raptor2 rasqal)
-      if(EXISTS "${CCCR_REDLAND_PREFIX}/include/${_incdir}")
-        install(DIRECTORY "${CCCR_REDLAND_PREFIX}/include/${_incdir}/"
-            DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/${_incdir}"
-        )
-      endif()
-    endforeach()
+  # Vendored static Redland archives. Shared cccr::cccr already contains them.
+  # Do not gate install() on EXISTS: the archives are produced by ExternalProject
+  # after this configure step, and install() runs only after the build.
+  if(NOT CCCR_BUILD_SHARED AND CCCR_REDLAND_VENDORED
+      AND CCCR_REDLAND_LINKED_STATIC AND CCCR_REDLAND_PREFIX)
+    install(FILES
+        "${CCCR_REDLAND_PREFIX}/lib/libraptor2.a"
+        "${CCCR_REDLAND_PREFIX}/lib/librasqal.a"
+        "${CCCR_REDLAND_PREFIX}/lib/librdf.a"
+        DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+    )
+    install(DIRECTORY "${CCCR_REDLAND_PREFIX}/include/"
+        DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
+        FILES_MATCHING
+            PATTERN "*.h"
+            PATTERN "*.hpp"
+    )
     message(STATUS
       "Install: vendored static Redland archives → \${CMAKE_INSTALL_PREFIX}/"
       "${CMAKE_INSTALL_LIBDIR}")
@@ -170,9 +140,21 @@ function(cccr_configure_install)
 
   set(_package_dir "${CMAKE_INSTALL_LIBDIR}/cmake/CCCR")
 
+  if(NOT DEFINED CCCR_REDLAND_TRANSITIVE_LINK)
+    set(CCCR_REDLAND_TRANSITIVE_LINK "")
+  endif()
+
+  if(CCCR_BUILD_SHARED)
+    set(CCCR_CONFIG_BUILD_SHARED 1)
+  else()
+    set(CCCR_CONFIG_BUILD_SHARED 0)
+  endif()
+
   set(CCCR_CONFIG_SAXON_CHE_VERSION ${CCCR_SAXON_CHE_VERSION})
   set(CCCR_CONFIG_REDLAND_VENDORED ${CCCR_REDLAND_VENDORED})
   set(CCCR_CONFIG_REDLAND_STATIC ${CCCR_REDLAND_LINKED_STATIC})
+  # Pipe-separated so configure_package_config_file does not split the list.
+  string(JOIN "|" CCCR_CONFIG_REDLAND_TRANSITIVE ${CCCR_REDLAND_TRANSITIVE_LINK})
 
   configure_package_config_file(
       "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/CCCRConfig.cmake.in"

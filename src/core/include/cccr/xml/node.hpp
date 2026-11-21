@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cccr/input/node.hpp>
+#include <cccr/platform.hpp>
 
 #include <utility>
 
@@ -12,7 +13,7 @@ using NodeRef = input::NodeRef;
 class Processor;
 
 /// @brief Owns a parsed XML document root node.
-class Document {
+class CCCR_API Document {
 public:
   /// @brief Constructs an empty document.
   Document() = default;

@@ -40,9 +40,9 @@ inline AssertionHandler g_custom_assertion_handler = nullptr;
 /// @param condition The failed condition as a string
 /// @param loc Source location of the assertion
 /// @param message Additional message
-void DefaultAssertionHandler(std::string_view condition,
-                             const std::source_location& loc,
-                             std::string_view message) noexcept;
+CCCR_API void DefaultAssertionHandler(std::string_view condition,
+                                      const std::source_location& loc,
+                                      std::string_view message) noexcept;
 
 /// @brief Unified assertion handling function.
 /// @details Priority order:
@@ -103,7 +103,7 @@ inline void SetAssertionHandler(AssertionHandler handler) noexcept {
 /// @param loc Source location of the assertion
 /// @param message Additional message (may be empty)
 /// @return Formatted assertion message
-[[nodiscard]] std::string FormatAssertionMessage(
+[[nodiscard]] CCCR_API std::string FormatAssertionMessage(
     std::string_view condition, const std::source_location& loc,
     std::string_view message);
 

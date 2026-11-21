@@ -1,8 +1,8 @@
 #pragma once
 
 #include <cccr/ast/types.hpp>
-
 #include <cccr/context.hpp>
+#include <cccr/platform.hpp>
 
 #include <string>
 
@@ -12,7 +12,7 @@ namespace cccr::eval {
 /// @param qname Schema QName
 /// @param ctx Shared allocator context
 /// @return Absolute IRI string
-[[nodiscard]] std::pmr::string QNameToIri(const ast::QName& qname,
-                                          Context ctx = {});
+[[nodiscard]] CCCR_API std::pmr::string QNameToIri(const ast::QName& qname,
+                                                   Context ctx = {});
 
 }  // namespace cccr::eval

@@ -28,7 +28,7 @@ target_include_directories(cccr_bindings_common
 )
 
 target_link_libraries(cccr_bindings_common PUBLIC
-    cccr::core
+    cccr::cccr
 )
 
 cccr_saxon_che_apply_build_rpath(cccr_bindings_common)

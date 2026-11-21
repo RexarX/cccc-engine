@@ -4,6 +4,7 @@
 #include <cccr/context.hpp>
 #include <cccr/eval/error.hpp>
 #include <cccr/input/source.hpp>
+#include <cccr/platform.hpp>
 #include <cccr/rdf/graph.hpp>
 #include <cccr/sparql/substitute.hpp>
 
@@ -42,12 +43,10 @@ struct EvalParams {
 /// @param pseudos Pseudo-variable bindings for `{{name}}`
 /// @param params Optional include base and allocator
 /// @return String value or EvalError
-[[nodiscard]] auto EvalToString(const ast::ValueExpr& expr,
-                                input::Source& source, input::NodeRef context,
-                                const rdf::Graph& knowledge,
-                                const sparql::PseudoMap& pseudos,
-                                const EvalParams& params = {})
-    -> EvalResult<std::pmr::string>;
+[[nodiscard]] CCCR_API auto EvalToString(
+    const ast::ValueExpr& expr, input::Source& source, input::NodeRef context,
+    const rdf::Graph& knowledge, const sparql::PseudoMap& pseudos,
+    const EvalParams& params = {}) -> EvalResult<std::pmr::string>;
 
 /// @brief Evaluates a subject-selector expression to a node sequence.
 /// @param expr Selector expression (`compute.xquery` select form)
@@ -55,9 +54,10 @@ struct EvalParams {
 /// @param context Parent context node
 /// @param params Optional include base and allocator
 /// @return Selected nodes or EvalError
-[[nodiscard]] auto EvalToNodes(const ast::ValueExpr& expr,
-                               input::Source& source, input::NodeRef context,
-                               const EvalParams& params = {})
+[[nodiscard]] CCCR_API auto EvalToNodes(const ast::ValueExpr& expr,
+                                        input::Source& source,
+                                        input::NodeRef context,
+                                        const EvalParams& params = {})
     -> EvalResult<std::pmr::vector<input::NodeRef>>;
 
 }  // namespace cccr::eval

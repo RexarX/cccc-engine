@@ -3,6 +3,7 @@
 #include <cccr/context.hpp>
 #include <cccr/csv/error.hpp>
 #include <cccr/csv/table.hpp>
+#include <cccr/platform.hpp>
 
 #include <string_view>
 
@@ -16,7 +17,7 @@ namespace cccr::csv {
 /// @param csv CSV text (UTF-8)
 /// @param ctx Shared allocator context (PMR table storage)
 /// @return Parsed table or CsvError
-[[nodiscard]] auto Parse(std::string_view csv, Context ctx = {})
+[[nodiscard]] CCCR_API auto Parse(std::string_view csv, Context ctx = {})
     -> CsvResult<Table>;
 
 }  // namespace cccr::csv

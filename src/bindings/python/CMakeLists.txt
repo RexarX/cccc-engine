@@ -210,10 +210,13 @@ endif()
 
 if(SKBUILD)
   # Top-level extension: `import cccr_py` (not a package sub-module).
+  # Saxon sits next to the extension. $ORIGIN keeps the wheel relocatable;
+  # release repair copies the rest of the non-glibc closure beside it.
   install(TARGETS cccr_py DESTINATION . COMPONENT python)
-  # Keep Saxon loadable after wheel install when the build RPATH is rewritten.
-  if(CCCR_SAXON_CHE_BUILD_RPATH)
-    set_property(TARGET cccr_py APPEND PROPERTY
-        INSTALL_RPATH ${CCCR_SAXON_CHE_BUILD_RPATH})
-  endif()
+  cccr_saxon_che_install_runtime("." COMPONENT python)
+  set_target_properties(cccr_py PROPERTIES
+      INSTALL_RPATH "$ORIGIN"
+      INSTALL_RPATH_USE_LINK_PATH FALSE
+      BUILD_WITH_INSTALL_RPATH FALSE
+  )
 endif()

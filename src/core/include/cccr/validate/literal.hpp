@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cccr/platform.hpp>
 #include <cccr/validate/error.hpp>
 
 #include <optional>
@@ -10,7 +11,8 @@ namespace cccr::validate {
 /// @brief Returns whether @p datatype is a supported XSD lexical type.
 /// @param datatype XSD local name, CURIE, or IRI
 /// @return `true` when @ref CheckLiteral can type-check it
-[[nodiscard]] bool KnownXsdDatatype(std::string_view datatype) noexcept;
+[[nodiscard]] CCCR_API bool KnownXsdDatatype(
+    std::string_view datatype) noexcept;
 
 /// @brief Checks that @p value conforms to @p datatype and optional bounds.
 /// @details Supports common XSD lexical forms including `string`, integer
@@ -22,10 +24,9 @@ namespace cccr::validate {
 ///                      strings; numeric for numeric types; lexical for dates)
 /// @param max_inclusive Optional inclusive upper bound
 /// @return Empty success or `ValidateError`
-[[nodiscard]] auto CheckLiteral(std::string_view value,
-                                std::string_view datatype,
-                                std::optional<std::string_view> min_inclusive,
-                                std::optional<std::string_view> max_inclusive)
-    -> ValidateResult<void>;
+[[nodiscard]] CCCR_API auto CheckLiteral(
+    std::string_view value, std::string_view datatype,
+    std::optional<std::string_view> min_inclusive,
+    std::optional<std::string_view> max_inclusive) -> ValidateResult<void>;
 
 }  // namespace cccr::validate

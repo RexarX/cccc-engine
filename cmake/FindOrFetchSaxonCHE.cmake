@@ -106,6 +106,58 @@ function(cccr_saxon_che_apply_build_rpath target)
       BUILD_RPATH ${CCCR_SAXON_CHE_BUILD_RPATH})
 endfunction()
 
+# Install libsaxonc-he / libsaxonc-core-he (SONAME symlink chains included).
+# Optional COMPONENT <name> limits the install() rule to that component.
+function(cccr_saxon_che_install_runtime destination)
+  cmake_parse_arguments(ARG "" "COMPONENT" "" ${ARGN})
+
+  if(NOT CCCR_SAXON_CHE_ROOT)
+    message(WARNING
+      "cccr_saxon_che_install_runtime: CCCR_SAXON_CHE_ROOT is empty; "
+      "SaxonC-HE runtime will not be installed.")
+    return()
+  endif()
+
+  set(_saxon_libs_installed FALSE)
+  foreach(_saxon_pkg IN ITEMS SaxonCHE SaxonCCoreHE)
+    set(_saxon_root "${CCCR_SAXON_CHE_ROOT}/${_saxon_pkg}")
+    if(NOT EXISTS "${_saxon_root}/lib")
+      continue()
+    endif()
+    file(GLOB _saxon_sos "${_saxon_root}/lib/libsaxonc*.so*")
+    if(NOT _saxon_sos)
+      continue()
+    endif()
+    if(ARG_COMPONENT)
+      install(DIRECTORY "${_saxon_root}/lib/"
+          DESTINATION "${destination}"
+          COMPONENT "${ARG_COMPONENT}"
+          USE_SOURCE_PERMISSIONS
+          FILES_MATCHING
+              PATTERN "libsaxonc*.so"
+              PATTERN "libsaxonc*.so.*"
+      )
+    else()
+      install(DIRECTORY "${_saxon_root}/lib/"
+          DESTINATION "${destination}"
+          USE_SOURCE_PERMISSIONS
+          FILES_MATCHING
+              PATTERN "libsaxonc*.so"
+              PATTERN "libsaxonc*.so.*"
+      )
+    endif()
+    set(_saxon_libs_installed TRUE)
+  endforeach()
+
+  if(NOT _saxon_libs_installed)
+    message(WARNING
+      "cccr_saxon_che_install_runtime: no libsaxonc*.so under "
+      "${CCCR_SAXON_CHE_ROOT}")
+  else()
+    message(STATUS "Install: SaxonC-HE shared libs → ${destination}")
+  endif()
+endfunction()
+
 function(cccr_saxon_che_configure_imported_targets)
   foreach(_cccr_saxon_tgt IN ITEMS SaxonCHE::saxonc-he SaxonCCoreHE::saxonc-core-he)
     if(TARGET ${_cccr_saxon_tgt})

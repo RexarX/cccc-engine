@@ -139,6 +139,7 @@ cmake --build build/linux-gcc-release
 | `CCCR_REDLAND_USE_SYSTEM` | `ON` | Prefer pkg-config Redland; else vendored |
 | `CCCR_ENABLE_LTO` | `ON` | LTO for Release / RelWithDebInfo when supported |
 | `CCCR_ENABLE_INSTALL` | `OFF` | Install rules (API still unstable) |
+| `CCCR_BUILD_SHARED` | `OFF` | Build `cccr::cccr` as `libcccr_core.so` instead of a static archive. Defines `CCCR_BUILD_SHARED` for the library and its consumers |
 | `CCCR_CACHE_DIR` | `<project>/.cache` | Saxon (and related) persistent cache |
 | `CCCR_SAXON_CHE_ROOT` | _(empty)_ | Pre-extracted SaxonC-HE root |
 
@@ -179,7 +180,7 @@ cmake --install build/linux-gcc-release --prefix /path/to/prefix
 
 SaxonC-HE runtime libraries are redistributed with the install so installed tools can resolve them via RPATH. See [`cmake/Install.cmake`](cmake/Install.cmake).
 
-Exported CMake targets (NAMESPACE `cccr::`): `cccr::core`, `cccr::bindings::c`.
+Exported CMake targets (NAMESPACE `cccr::`): `cccr::cccr`, `cccr::bindings::c`. `cccr::cccr` is a shared library when `CCCR_BUILD_SHARED=ON` and a static archive otherwise. A static install still expects the consumer to link Redland and SaxonC-HE. A shared install keeps those inside `libcccr_core.so`.
 
 ### Python wheel (scikit-build)
 
@@ -196,7 +197,7 @@ python -c 'import cccr_py; print(cccr_py.__version__)'
 python src/bindings/python/tests/smoke.py examples/data/base
 ```
 
-The wheel does not bundle SaxonC-HE; the extension keeps an RPATH into the CMake Saxon cache when built on the same machine. For relocatable wheels you still need Saxon on `LD_LIBRARY_PATH` (or a future auditwheel pass).
+A local `pip install .` installs SaxonC-HE next to `cccr_py` and records `$ORIGIN` as the extension RPATH, so the module loads Saxon without `LD_LIBRARY_PATH`. Other system libraries Redland needs (`libxml2`, ICU, curl) still come from the machine you built on. Release wheels vendor that closure too; see [GitHub releases](#github-releases).
 
 ---
 
@@ -323,3 +324,43 @@ More recipes: [`examples/cli/README.md`](examples/cli/README.md).
 | `-q` / `--query` | SPARQL text or path to a `.rq` file |
 | `--format {json,xml,html}` | Result serialization (default: `json`) |
 | `-o` / `--output` | Output path (default: stdout) |
+
+---
+
+## GitHub releases
+
+Tagged releases (`vX.Y.Z`, matching `project(VERSION)` in `CMakeLists.txt` and `pyproject.toml`) publish Linux x86_64 artifacts for glibc 2.35 or newer (Ubuntu 22.04 and newer). They are built with GCC 14 and the vendored static Redland stack. SaxonC-HE is included. Redland is distributed under its Apache-2.0 license alternative; SaxonC-HE is MPL-2.0. Each archive has a `LICENSES/` directory.
+
+| Download | What you get |
+| --- | --- |
+| `cccr-cli-<version>-linux-x86_64.tar.gz` | `bin/cccr_cli` plus the shared libraries it needs, including Saxon and the GCC 14 `libstdc++` |
+| `cccr-c-<version>-linux-x86_64.tar.gz` | `libcccr_bindings_c.so`, `include/cccr/bindings/c/`, and the same bundled runtime |
+| `cccr-cpp-<version>-linux-x86_64.tar.gz` | `libcccr_core.so` (SONAME 0), headers, Saxon, and a CMake package (`cccr::cccr`) |
+| `cccr_py-<version>-cp3xx-cp3xx-manylinux_2_35_x86_64.whl` | One wheel each for CPython 3.10, 3.11, 3.12, and 3.13 |
+
+The CLI and the C library bundle GCC 14's `libstdc++`. Use them from C or from a process that is not already linked to a different `libstdc++`. The C++ shared library uses the caller's GCC 14 `libstdc++`, so link it with `g++-14`. The C++ API is still unstable (`SOVERSION` 0). `CCCR_BUILD_SHARED` selects that shared `cccr::cccr`; the release build turns it on.
+
+```bash
+# CLI
+tar -xzf cccr-cli-0.1.0-linux-x86_64.tar.gz
+./cccr-cli-0.1.0-linux-x86_64/bin/cccr_cli --help
+
+# C
+tar -xzf cccr-c-0.1.0-linux-x86_64.tar.gz
+cc -std=c11 app.c \
+  -I cccr-c-0.1.0-linux-x86_64/include \
+  -L cccr-c-0.1.0-linux-x86_64/lib \
+  -Wl,-rpath,'$ORIGIN/../lib' -Wl,--disable-new-dtags \
+  -lcccr_bindings_c
+
+# C++ (g++-14, plus libxml2 and zlib)
+cmake -S your_app -B build \
+  -DCMAKE_PREFIX_PATH=$PWD/cccr-cpp-0.1.0-linux-x86_64 \
+  -DCMAKE_CXX_COMPILER=g++-14
+# target_link_libraries(your_app PRIVATE cccr::cccr)
+
+# Python
+pip install cccr_py-0.1.0-cp311-cp311-manylinux_2_35_x86_64.whl
+```
+
+The workflow that builds these files is [`.github/workflows/release.yml`](.github/workflows/release.yml). It runs on a `v*` tag. `workflow_dispatch` builds the same artifacts without publishing a release.

@@ -2,6 +2,7 @@
 
 #include <cccr/context.hpp>
 #include <cccr/input/query.hpp>
+#include <cccr/platform.hpp>
 #include <cccr/xml/error.hpp>
 #include <cccr/xml/node.hpp>
 
@@ -13,7 +14,7 @@
 namespace cccr::xml {
 
 /// @brief Saxon session: parse XML and evaluate XQuery against a context item.
-class Processor {
+class CCCR_API Processor {
 public:
   /// @brief Constructs a processor that allocates via @p ctx.
   /// @param ctx Shared allocator context

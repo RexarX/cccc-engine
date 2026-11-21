@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cccr/context.hpp>
+#include <cccr/platform.hpp>
 #include <cccr/rdf/graph.hpp>
 #include <cccr/sparql/error.hpp>
 
@@ -29,9 +30,10 @@ enum class ResultFormat : uint8_t {
 /// @param format Output format
 /// @param ctx Shared allocator context for the returned document
 /// @return Formatted document, or SparqlError
-[[nodiscard]] auto QueryFormatted(std::string_view query,
-                                  const rdf::Graph& graph, ResultFormat format,
-                                  Context ctx = {})
+[[nodiscard]] CCCR_API auto QueryFormatted(std::string_view query,
+                                           const rdf::Graph& graph,
+                                           ResultFormat format,
+                                           Context ctx = {})
     -> SparqlResult<std::pmr::string>;
 
 }  // namespace cccr::sparql

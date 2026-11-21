@@ -115,6 +115,26 @@ function(cccr_redland_import_static_archives raptor_a rasqal_a rdf_a)
   set(CCCR_REDLAND_LINKED_STATIC TRUE PARENT_SCOPE)
 endfunction()
 
+# Remember linker flags for the installed static package.
+# Absolute build-machine paths must not be written into CCCRConfig.cmake.
+# Versioned SONAMEs (libmhash.so.2) are passed as -l:filename so the linker
+# looks up that exact file instead of the unversioned -dev symlink.
+function(cccr_redland_cache_transitive_link)
+  set(_flags "")
+  foreach(_lib IN LISTS ARGN)
+    if(_lib STREQUAL "m")
+      list(APPEND _flags "m")
+      continue()
+    endif()
+    cmake_path(GET _lib FILENAME _base)
+    if(_base)
+      list(APPEND _flags "-l:${_base}")
+    endif()
+  endforeach()
+  set(CCCR_REDLAND_TRANSITIVE_LINK "${_flags}" CACHE INTERNAL
+      "Link flags of vendored Redland shared transitive dependencies" FORCE)
+endfunction()
+
 # ---------------------------------------------------------------------------
 # System packages → shared
 # ---------------------------------------------------------------------------
@@ -171,6 +191,7 @@ if(_cccr_redland_system_ok)
     "(raptor2 ${CCCR_SYSTEM_RAPTOR2_VERSION}, "
     "rasqal ${CCCR_SYSTEM_RASQAL_VERSION}, "
     "redland ${CCCR_SYSTEM_REDLAND_VERSION})")
+  cccr_redland_cache_transitive_link()
 else()
   # -------------------------------------------------------------------------
   # Vendored ExternalProject → static archives
@@ -210,17 +231,27 @@ else()
 
   set(_cccr_pkg_config_path
       "${CCCR_REDLAND_PREFIX}/lib/pkgconfig:$ENV{PKG_CONFIG_PATH}")
+  # Static archives are linked into libcccr_core.so and libcccr_bindings_c.so.
+  set(_cccr_rl_pic_cflags "-fPIC")
 
   ExternalProject_Add(cccr_raptor2_ep
     SOURCE_DIR "${CCCR_RAPTOR2_SOURCE_DIR}"
     BINARY_DIR "${CCCR_REDLAND_BUILD}/raptor2"
+    # /bin/sh: the vendored configure scripts are not necessarily executable.
     CONFIGURE_COMMAND
-      "${CCCR_RAPTOR2_SOURCE_DIR}/configure"
+      ${CMAKE_COMMAND} -E env
+        "CFLAGS=${_cccr_rl_pic_cflags}"
+        "CXXFLAGS=${_cccr_rl_pic_cflags}"
+      /bin/sh "${CCCR_RAPTOR2_SOURCE_DIR}/configure"
         --prefix=${CCCR_REDLAND_PREFIX}
         --enable-static
         --disable-shared
         --disable-gtk-doc
-    BUILD_COMMAND "${CCCR_MAKE_PROGRAM}" -j
+    BUILD_COMMAND
+      ${CMAKE_COMMAND} -E env
+        "CFLAGS=${_cccr_rl_pic_cflags}"
+        "CXXFLAGS=${_cccr_rl_pic_cflags}"
+      "${CCCR_MAKE_PROGRAM}" -j
     INSTALL_COMMAND "${CCCR_MAKE_PROGRAM}" install
     BUILD_BYPRODUCTS
       "${_cccr_rl_raptor_lib}"
@@ -236,9 +267,11 @@ else()
     DEPENDS cccr_raptor2_ep
     CONFIGURE_COMMAND
       ${CMAKE_COMMAND} -E env
+        "CFLAGS=${_cccr_rl_pic_cflags}"
+        "CXXFLAGS=${_cccr_rl_pic_cflags}"
         "PKG_CONFIG_PATH=${_cccr_pkg_config_path}"
         "LD_LIBRARY_PATH=${CCCR_REDLAND_PREFIX}/lib:$ENV{LD_LIBRARY_PATH}"
-      "${CCCR_RASQAL_SOURCE_DIR}/configure"
+      /bin/sh "${CCCR_RASQAL_SOURCE_DIR}/configure"
         --prefix=${CCCR_REDLAND_PREFIX}
         --enable-static
         --disable-shared
@@ -246,6 +279,8 @@ else()
         --with-raptor=system
     BUILD_COMMAND
       ${CMAKE_COMMAND} -E env
+        "CFLAGS=${_cccr_rl_pic_cflags}"
+        "CXXFLAGS=${_cccr_rl_pic_cflags}"
         "PKG_CONFIG_PATH=${_cccr_pkg_config_path}"
         "LD_LIBRARY_PATH=${CCCR_REDLAND_PREFIX}/lib:$ENV{LD_LIBRARY_PATH}"
       "${CCCR_MAKE_PROGRAM}" -j
@@ -268,9 +303,11 @@ else()
     DEPENDS cccr_rasqal_ep
     CONFIGURE_COMMAND
       ${CMAKE_COMMAND} -E env
+        "CFLAGS=${_cccr_rl_pic_cflags}"
+        "CXXFLAGS=${_cccr_rl_pic_cflags}"
         "PKG_CONFIG_PATH=${_cccr_pkg_config_path}"
         "LD_LIBRARY_PATH=${CCCR_REDLAND_PREFIX}/lib:$ENV{LD_LIBRARY_PATH}"
-      "${CCCR_REDLAND_SOURCE_DIR}/configure"
+      /bin/sh "${CCCR_REDLAND_SOURCE_DIR}/configure"
         --prefix=${CCCR_REDLAND_PREFIX}
         --enable-static
         --disable-shared
@@ -284,6 +321,8 @@ else()
         --with-virtuoso=no
     BUILD_COMMAND
       ${CMAKE_COMMAND} -E env
+        "CFLAGS=${_cccr_rl_pic_cflags}"
+        "CXXFLAGS=${_cccr_rl_pic_cflags}"
         "PKG_CONFIG_PATH=${_cccr_pkg_config_path}"
         "LD_LIBRARY_PATH=${CCCR_REDLAND_PREFIX}/lib:$ENV{LD_LIBRARY_PATH}"
       "${CCCR_MAKE_PROGRAM}" -j
@@ -329,6 +368,7 @@ else()
     "${_cccr_rl_raptor_lib}" "${_cccr_rl_rasqal_lib}" "${_cccr_rl_rdf_lib}"
     INCLUDES ${_cccr_vendored_includes}
     TRANSITIVE ${_cccr_transitive})
+  cccr_redland_cache_transitive_link(${_cccr_transitive})
   add_dependencies(Redland::raptor2 cccr_raptor2_ep)
   add_dependencies(Redland::rasqal cccr_rasqal_ep)
   add_dependencies(Redland::redland cccr_redland_ep)

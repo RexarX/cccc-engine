@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cccr/context.hpp>
+#include <cccr/platform.hpp>
 
 #include <string>
 #include <string_view>
@@ -18,8 +19,7 @@ using PseudoMap = std::pmr::unordered_map<std::pmr::string, std::pmr::string>;
 /// @param variables Pseudo-variable map
 /// @param ctx Shared allocator context
 /// @return Query with substitutions applied
-[[nodiscard]] std::pmr::string SubstitutePseudos(std::string_view text,
-                                                 const PseudoMap& variables,
-                                                 Context ctx = {});
+[[nodiscard]] CCCR_API std::pmr::string SubstitutePseudos(
+    std::string_view text, const PseudoMap& variables, Context ctx = {});
 
 }  // namespace cccr::sparql

@@ -80,7 +80,7 @@ foreach(_name IN LISTS CCCR_EXAMPLE_NAMES)
   )
 
   target_link_libraries(${_target} PRIVATE
-      cccr::core
+      cccr::cccr
       cccr_examples_compiler_warnings
       cccr_examples_compiler_optimizations
   )

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cccr/platform.hpp>
 #include <cccr/rdf/graph.hpp>
 
 #include <memory_resource>
@@ -10,6 +11,6 @@ namespace cccr::rdf {
 /// @details Allocates the result using @p graph's allocator.
 /// @param graph Graph to serialize
 /// @return RDF/XML string, or empty on failure
-[[nodiscard]] std::pmr::string ToRdfXml(const Graph& graph);
+[[nodiscard]] CCCR_API std::pmr::string ToRdfXml(const Graph& graph);
 
 }  // namespace cccr::rdf

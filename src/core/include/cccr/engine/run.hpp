@@ -4,6 +4,7 @@
 #include <cccr/context.hpp>
 #include <cccr/engine/error.hpp>
 #include <cccr/input/source.hpp>
+#include <cccr/platform.hpp>
 #include <cccr/rdf/graph.hpp>
 
 #include <concepts>
@@ -30,8 +31,9 @@ struct RunParams {
 /// @param source Loaded input document (e.g. @ref xml::XmlSource)
 /// @param params Optional knowledge graph, include base, and allocator
 /// @return Output RDF graph or EngineError
-[[nodiscard]] auto Run(const ast::Schema& schema, input::Source& source,
-                       const RunParams& params = {})
+[[nodiscard]] CCCR_API auto Run(const ast::Schema& schema,
+                                input::Source& source,
+                                const RunParams& params = {})
     -> EngineResult<rdf::Graph>;
 
 /// @brief Runs @p schema over each source in @p sources and merges outputs.

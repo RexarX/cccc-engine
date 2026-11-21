@@ -1,19 +1,18 @@
 #pragma once
 
-/// @brief Marks a symbol as part of the shared-library public API when built
-///        as a DLL / shared object.
-#ifdef CCCR_PLATFORM_WINDOWS
-#ifdef CCCR_BUILD_SHARED
+/// @brief Marks a symbol as part of the shared-library public API.
+/// @details `CCCR_BUILD_SHARED` is set on the library and on its consumers
+///          when `cccr::cccr` is a shared library. `CCCR_CORE_BUILDING` is set
+///          only while compiling `cccr_core`, so Windows consumers import
+///          the symbols. A static build leaves the macro empty.
+#if defined(CCCR_BUILD_SHARED) && defined(CCCR_PLATFORM_WINDOWS)
+#ifdef CCCR_CORE_BUILDING
 #define CCCR_API __declspec(dllexport)
 #else
 #define CCCR_API __declspec(dllimport)
 #endif
-#elif defined(CCCR_PLATFORM_LINUX)
-#ifdef CCCR_BUILD_SHARED
+#elif defined(CCCR_BUILD_SHARED) && defined(CCCR_PLATFORM_LINUX)
 #define CCCR_API __attribute__((visibility("default")))
-#else
-#define CCCR_API
-#endif
 #else
 #define CCCR_API
 #endif

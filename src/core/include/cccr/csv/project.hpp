@@ -2,6 +2,7 @@
 
 #include <cccr/context.hpp>
 #include <cccr/csv/table.hpp>
+#include <cccr/platform.hpp>
 
 #include <memory_resource>
 #include <string>
@@ -15,7 +16,7 @@ namespace cccr::csv {
 /// @param table Parsed CSV table
 /// @param ctx Shared allocator context
 /// @return XML document text
-[[nodiscard]] auto ProjectToXml(const Table& table, Context ctx = {})
+[[nodiscard]] CCCR_API auto ProjectToXml(const Table& table, Context ctx = {})
     -> std::pmr::string;
 
 }  // namespace cccr::csv

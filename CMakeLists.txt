@@ -55,6 +55,7 @@ option(CCCR_BUILD_EXAMPLES "Build examples" ${PROJECT_IS_TOP_LEVEL})
 option(CCCR_ENABLE_LTO "Enable Link Time Optimization" ON)
 option(CCCR_ENABLE_WARNINGS_AS_ERRORS "Treat warnings as errors" OFF)
 option(CCCR_ENABLE_INSTALL "Enable installation rules" OFF)
+option(CCCR_BUILD_SHARED "Build cccr::cccr as a shared library" OFF)
 
 # Include utilities
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")

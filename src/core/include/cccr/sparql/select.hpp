@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cccr/context.hpp>
+#include <cccr/platform.hpp>
 #include <cccr/rdf/graph.hpp>
 #include <cccr/sparql/error.hpp>
 
@@ -18,8 +19,9 @@ namespace cccr::sparql {
 /// @param graph Knowledge graph
 /// @param ctx Shared allocator context
 /// @return First binding of the first projected variable, or SparqlError
-[[nodiscard]] auto SelectFirst(std::string_view query, const rdf::Graph& graph,
-                               Context ctx = {})
+[[nodiscard]] CCCR_API auto SelectFirst(std::string_view query,
+                                        const rdf::Graph& graph,
+                                        Context ctx = {})
     -> SparqlResult<std::pmr::string>;
 
 }  // namespace cccr::sparql
